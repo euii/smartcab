@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 import random
 import math
 from environment import Agent, Environment
@@ -24,7 +26,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-        self.t = 1
+        self.training_time = 1
 
     def reset(self, destination=None, testing=False):
         """ The reset function is called at the beginning of each trial.
@@ -44,8 +46,13 @@ class LearningAgent(Agent):
             self.epsilon = 0
             self.alpha = 0
         else:
-            self.t = self.t + 1.0
-            self.epsilon = 1 / (1 + math.exp(1.0) ** ((self.t / 40) - 6))
+            # self.epsilon = self.epsilon - 0.05  #线性衰减
+            self.epsilon = 0.99 ** self.training_time
+            # self.epsilon = 1./self.training_time**2
+            # self.epsilon = 1. * math.exp(-self.alpha * self.training_time)
+            # self.epsilon = math.cos(self.alpha * self.training_time)
+
+            self.training_time = self.training_time + 1
 
         return None
 
@@ -94,6 +101,7 @@ class LearningAgent(Agent):
         if self.learning:
             if (not self.Q.has_key(state)):
                 self.Q.setdefault(state, {action: 0.0 for action in self.valid_actions})
+                print "Q is created."
         return
 
     def choose_action(self, state):
@@ -125,34 +133,34 @@ class LearningAgent(Agent):
         return action
 
 
-def learn(self, state, action, reward):
-    """ The learn function is called after the agent completes an action and
-        receives an award. This function does not consider future rewards
-        when conducting learning. """
+    def learn(self, state, action, reward):
+        """ The learn function is called after the agent completes an action and
+            receives an award. This function does not consider future rewards
+            when conducting learning. """
 
-    ###########
-    ## TO DO ##
-    ###########
-    # When learning, implement the value iteration update rule
-    #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-    if self.learning:
-        self.Q[state][action] += self.alpha * (reward - self.Q[state][action])
+        ###########
+        ## TO DO ##
+        ###########
+        # When learning, implement the value iteration update rule
+        #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
+        if self.learning:
+            self.Q[state][action] += self.alpha * (reward - self.Q[state][action])
 
-    return
+        return
 
 
-def update(self):
-    """ The update function is called when a time step is completed in the
-        environment for a given trial. This function will build the agent
-        state, choose an action, receive a reward, and learn if enabled. """
+    def update(self):
+        """ The update function is called when a time step is completed in the
+            environment for a given trial. This function will build the agent
+            state, choose an action, receive a reward, and learn if enabled. """
 
-    state = self.build_state()  # Get current state
-    self.createQ(state)  # Create 'state' in Q-table
-    action = self.choose_action(state)  # Choose an action
-    reward = self.env.act(self, action)  # Receive a reward
-    self.learn(state, action, reward)  # Q-learn
+        state = self.build_state()  # Get current state
+        self.createQ(state)  # Create 'state' in Q-table
+        action = self.choose_action(state)  # Choose an action
+        reward = self.env.act(self, action)  # Receive a reward
+        self.learn(state, action, reward)  # Q-learn
 
-    return
+        return
 
 
 def run():
@@ -165,7 +173,7 @@ def run():
     #   verbose     - set to True to display additional output from the simulation
     #   num_dummies - discrete number of dummy agents in the environment, default is 100
     #   grid_size   - discrete number of intersections (columns, rows), default is (8, 6)
-    env = Environment(verbose=True)
+    env = Environment()  # 创建一个环境，包含：信号灯，世界的大小，动作
 
     ##############
     # Create the driving agent
@@ -174,14 +182,14 @@ def run():
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
     # agent = env.create_agent(LearningAgent)
-    agent = env.create_agent(LearningAgent, learning=False)
-    # agent = env.create_agent(LearningAgent, learning=True, epsilon=0.9, alpha=0.4)
+    # agent = env.create_agent(LearningAgent, learning=True)  # 在环境里放置一个代理
+    agent = env.create_agent(LearningAgent, learning=True, epsilon=1., alpha=0.6)
 
     ##############
     # Follow the driving agent
     # Flags:
     #   enforce_deadline - set to True to enforce a deadline metric
-    env.set_primary_agent(agent,enforce_deadline=True)
+    env.set_primary_agent(agent, enforce_deadline=True)
 
     ##############
     # Create the simulation
@@ -190,14 +198,14 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env,log_metrics=True,update_delay=0.01)
+    sim = Simulator(env, log_metrics=True, update_delay=0.01,optimized=True,display=False)
 
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10)
+    sim.run(n_test=10,tolerance=0.001)
 
 
 if __name__ == '__main__':
